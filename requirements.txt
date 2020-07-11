@@ -1,0 +1,6 @@
+numpy
+pillow
+tqdm
+opencv-python
+matplotlib
+keras==2.1.6
