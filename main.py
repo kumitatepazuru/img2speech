@@ -9,7 +9,6 @@ from tqdm import tqdm
 
 import load_data
 
-
 # data = np.load("train_datas.npz")
 # train_images = data["train_images"]
 # train_labels = data["train_labels"]
@@ -28,20 +27,20 @@ import load_data
 #
 train_paths = []
 for root, dirs, files in tqdm(os.walk("./font")):
-    train_paths += list(map(lambda n:root+"/"+n,files))
+    train_paths += list(map(lambda n: root + "/" + n, files))
 
 val_count = int(len(train_paths) * 0.2)
 
 train_gen = load_data.Generator(
-                             train_paths[val_count:],
-                             batch_size=64)
+    train_paths[val_count:],
+    batch_size=1024)
 val_gen = load_data.Generator(
-                             train_paths[:val_count],
-                             batch_size=64)
+    train_paths[:val_count],
+    batch_size=1024)
 
 # モデルの作成
 model = Sequential()
-model.add(Dense(512, activation='tanh', input_shape=(32**2,)))  # 入力層
+model.add(Dense(512, activation='tanh', input_shape=(32 ** 2,)))  # 入力層
 model.add(BatchNormalization())
 model.add(Dense(256, activation='tanh'))  # 隠れ層
 model.add(Dropout(rate=0.5))  # ドロップアウト
@@ -50,12 +49,14 @@ model.add(Dense(94, activation='softmax'))  # 出力層
 model.compile(loss='categorical_crossentropy', optimizer=Adam(), metrics=['acc'])
 # 学習
 history = model.fit_generator(
-           train_gen,
-           steps_per_epoch=train_gen.num_batches_per_epoch,
-           validation_data=val_gen,
-           validation_steps=val_gen.num_batches_per_epoch,
-           epochs=100,
-           shuffle=True)
+    train_gen,
+    steps_per_epoch=train_gen.num_batches_per_epoch,
+    validation_data=val_gen,
+    validation_steps=val_gen.num_batches_per_epoch,
+    epochs=100,
+    use_multiprocessing=True,
+    workers=8,
+    shuffle=True)
 model.save("model.h5")
 # model = load_model("model.h5")
 

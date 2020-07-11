@@ -1,8 +1,6 @@
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from keras.utils import Sequence
-from multiprocessing import Pool, Process
-
 
 
 class Generator(Sequence):
@@ -71,7 +69,7 @@ class Generator(Sequence):
             self.data_pos[0] += 1
             self.font_data = ImageFont.truetype(self.data_paths[self.data_pos[0]], self.font_size)
             self.data_pos[1] = 0
-            img,_ = self._load_data()
+            img, _ = self._load_data()
         return img, self.data_pos[2]
 
     def __getitem__(self, idx) -> np.array:
@@ -90,19 +88,10 @@ class Generator(Sequence):
         imgs = np.empty((end_pos-start_pos+1, self.height, self.width), dtype=np.float32)
         labels = np.zeros((end_pos-start_pos+1, self.num_of_class), dtype=np.int16)
 
-        p = Pool(12)
-        tmp_img = []
-        tmp_label = []
-        for i in range(self.batch_size):
-            img, label = p.apply_async(self._load_data)
-            tmp_img.append(img)
-            tmp_label.append(label)
-
         for i in range(self.batch_size):
             img, label = self._load_data()
             imgs[i, :] = img
             labels[i][label] = 1
-        np.save("test.npy", labels)
         # データセットの画像の前処理
         imgs = imgs.reshape((imgs.shape[0], imgs.shape[1] ** 2))
 
