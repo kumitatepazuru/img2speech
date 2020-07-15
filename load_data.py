@@ -1,6 +1,9 @@
+import os
+
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from keras.utils import Sequence
+from tqdm import tqdm
 
 
 class Generator(Sequence):
@@ -17,38 +20,23 @@ class Generator(Sequence):
         """
 
         self.data_paths = data_paths
-        self.length = len(data_paths) * 94 * int(180/5)
+        self.length = len(data_paths) * 94 * int(180 / 5)
         self.batch_size = batch_size
         self.width = width
         self.height = height
         self.font_size = font_size
         self.num_of_class = num_of_class
         self.data_pos = [0, 0, 0]
-        self.font_data = ImageFont.truetype(self.data_paths[self.data_pos[0]], self.font_size)
+        self.font_data = ImageFont.truetype(self.data_paths[self.data_pos[0]], self.font_size - 5)
         self.num_batches_per_epoch = int((self.length - 1) / batch_size) + 1
 
     def _load_data(self):
         text = chr(self.data_pos[2] + 33)
-        font_path = self.data_paths[self.data_pos[0]]
         font_color = "white"
-        rot = self.data_pos[1]*5
+        rot = self.data_pos[1] * 5
 
-        # get fontsize
-
-        tmp = Image.new('RGBA', (1, 1), (0, 0, 0, 0))  # dummy for get text_size
-
-        tmp_d = ImageDraw.Draw(tmp)
         try:
-            text_size = tmp_d.textsize(text, self.font_data)
-            i = self.font_size
-            while text_size[0] > self.font_size - 5 or text_size[1] > self.font_size - 5:
-                i -= 1
-                font_data = ImageFont.truetype(font_path, i)
-                text_size = tmp_d.textsize(text, font_data)
-            # draw text
-
-            img = Image.new('RGBA', [self.font_size] * 2, (0, 0, 0, 0))  # background: transparent
-
+            img = Image.new('RGBA', [self.font_size] * 2, (0, 0, 0, 0)).convert("L")  # background: transparent
             img_d = ImageDraw.Draw(img)
             img_d.text((0, 0), text, fill=font_color, font=self.font_data)
             img = img.rotate(rot)
@@ -61,16 +49,14 @@ class Generator(Sequence):
                     self.data_pos[0] += 1
                     self.font_data = ImageFont.truetype(self.data_paths[self.data_pos[0]], self.font_size)
                     self.data_pos[1] = 0
-
             img = np.array(img)
-            img = 0.299 * img[:, :, 2] + 0.587 * img[:, :, 1] + 0.114 * img[:, :, 0]
         except OSError:
             self.data_pos[2] = 0
             self.data_pos[0] += 1
             self.font_data = ImageFont.truetype(self.data_paths[self.data_pos[0]], self.font_size)
             self.data_pos[1] = 0
             img, _ = self._load_data()
-        return img, self.data_pos[2]
+        return img + np.random.rand(self.font_size, self.font_size), self.data_pos[2]
 
     def __getitem__(self, idx) -> np.array:
         """Get batch data
@@ -85,10 +71,10 @@ class Generator(Sequence):
         end_pos = start_pos + self.batch_size
         if end_pos > self.length:
             end_pos = self.length
-        imgs = np.empty((end_pos-start_pos+1, self.height, self.width), dtype=np.float32)
-        labels = np.zeros((end_pos-start_pos+1, self.num_of_class), dtype=np.int16)
+        imgs = np.empty((end_pos - start_pos + 1, self.height, self.width), dtype=np.float32)
+        labels = np.zeros((end_pos - start_pos + 1, self.num_of_class), dtype=np.int16)
 
-        for i in range(self.batch_size):
+        for i in range(end_pos - start_pos + 1):
             img, label = self._load_data()
             imgs[i, :] = img
             labels[i][label] = 1
@@ -105,3 +91,13 @@ class Generator(Sequence):
     def on_epoch_end(self):
         """Task when end of epoch"""
         pass
+
+
+if __name__ == '__main__':
+    train_paths = []
+    for root, dirs, files in tqdm(os.walk("./font")):
+        train_paths += list(map(lambda n: root + "/" + n, files))
+    tmp = Generator(
+        train_paths,
+        batch_size=4096)
+    a = tmp[0]
