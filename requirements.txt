@@ -1,6 +1,7 @@
 numpy
 pillow
 tqdm
-opencv-python
 matplotlib
 keras==2.1.6
+tensorflow<2.0.0
+tensorflowjs==0.8.5
