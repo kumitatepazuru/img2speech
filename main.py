@@ -1,75 +1,95 @@
-# パッケージのインポート
-import os
+from keras.callbacks import LearningRateScheduler, ModelCheckpoint
 
+from model import create_model
+from keras.preprocessing.image import ImageDataGenerator
+from emnist import extract_training_samples, extract_test_samples
+from tensorflow.keras.utils import to_categorical
+import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
-import load_data
-from model import larger_model
 
-train_paths = []
-for root, dirs, files in tqdm(os.walk("./font")):
-    train_paths += list(map(lambda n: root + "/" + n, files))
+def step_decay(epoch):
+    lr = 0.1
+    if epoch % 10 == 0:
+        lr /= 2
+    return lr
 
-val_count = int(len(train_paths) * 0.01)
 
-train_gen = load_data.Generator(
-    train_paths[val_count:],
-    batch_size=4096)
-val_gen = load_data.Generator(
-    train_paths[:val_count],
-    batch_size=4096)
+train_images, train_labels = extract_training_samples("byclass")
+test_images, test_labels = extract_test_samples('byclass')
 
-# Building the model
-model = larger_model()
+# Dataset images preprocessing
+train_images = train_images.reshape((-1, train_images.shape[1], train_images.shape[2], 1))
+test_images = test_images.reshape((-1, train_images.shape[1], train_images.shape[2], 1))
 
-# model = Sequential()
-# model.add(Dense(1024, activation='relu', input_shape=(32 ** 2,)))
-# model.add(Dropout(0.2))
-# model.add(Dense(1024, activation='relu'))
-# model.add(Dropout(0.2))
-# model.add(BatchNormalization())
-# model.add(Dense(94, activation='softmax'))  # 出力層
+# Dataset labels preprocessing
+train_labels = to_categorical(train_labels, 62)
+test_labels = to_categorical(test_labels, 62)
 
-# model = Sequential()
-# model.add(Convolution2D(32, 3, 3, input_shape=(32, 32, 1)))
-# model.add(Activation('relu'))
-# model.add(Convolution2D(32, 3, 3))
-# model.add(Activation('relu'))
-# model.add(MaxPooling2D(pool_size=(3, 3)))
-# model.add(Dropout(0.5))
-#
-# model.add(Convolution2D(64, 3, 3))
-# model.add(Activation('relu'))
-# model.add(Convolution2D(64, 3, 3))
-# model.add(Activation('relu'))
-# model.add(MaxPooling2D(pool_size=(3, 3)))
-# model.add(Dropout(0.5))
-#
-# model.add(Flatten())
-# model.add(Dense(256))
-# model.add(Activation('relu'))
-# model.add(Dropout(0.5))
-# model.add(Dense(94))
-# model.add(Activation('softmax'))
+datagen = ImageDataGenerator(
+    featurewise_center=False,
+    samplewise_center=False,
+    featurewise_std_normalization=False,
+    samplewise_std_normalization=False,
+    zca_whitening=False,
+    rotation_range=30,
+    width_shift_range=0.3,
+    height_shift_range=0.3,
+    horizontal_flip=True,
+    vertical_flip=False,
+    validation_split=0.1
+)
 
-# 学習
+datagen.fit(train_images)
+
+# Create a model
+model = create_model()
+
+# Train
+batch_size = 128
+
 history = model.fit_generator(
-    train_gen,
-    steps_per_epoch=train_gen.num_batches_per_epoch,
-    validation_data=val_gen,
-    validation_steps=val_gen.num_batches_per_epoch,
-    epochs=30,
-    use_multiprocessing=True,
+    datagen.flow(train_images, train_labels, batch_size=batch_size),
+    steps_per_epoch=len(train_images) / batch_size,
+    epochs=150,
     workers=12,
-    shuffle=True)
-model.save("model.h5")
-# model = load_model("model.h5")
+    use_multiprocessing=True,
+    callbacks=[
+        LearningRateScheduler(step_decay),
+        ModelCheckpoint("model.{epoch:02d}-{acc:.2f}.hdf5",monitor="acc")
+    ]
+)
 
-# グラフの表示
-plt.plot(history.history['acc'], label='acc')
-plt.plot(history.history['val_acc'], label='val_acc')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(loc='best')
+model.save("model.h5")
+
+# Plot training & validation accuracy values
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
 plt.show()
+
+# Plot training & validation loss values
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.show()
+
+# Evaluation
+test_loss, test_acc = model.evaluate(test_images, test_labels)
+print('loss: {:.3f}\nacc: {:.3f}'.format(test_loss, test_acc))
+
+# Show predict images
+for i in range(10):
+    plt.imshow(test_images[i].reshape((28, 28)), 'gray')
+plt.show()
+
+# Show predict labels
+test_predictions = model.predict(test_images[0:10])
+test_predictions = np.argmax(test_predictions, axis=1)
+print(test_predictions)

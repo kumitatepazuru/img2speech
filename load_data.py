@@ -1,9 +1,7 @@
 import os
-import random
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from keras.datasets import cifar10
 from keras.utils import Sequence
 from tqdm import tqdm
 
@@ -11,7 +9,7 @@ from tqdm import tqdm
 class Generator(Sequence):
     """Custom generator"""
 
-    def __init__(self, data_paths, batch_size=1, width=28, height=28, font_size=28, num_of_class=94, rot=10):
+    def __init__(self, data_paths, batch_size=1, width=28, height=28, font_size=28, num_of_class=74, rot=10):
         """construction
 
         :param data_paths: List of image file
@@ -95,8 +93,8 @@ class Generator(Sequence):
                         self.font_data = ImageFont.truetype(self.data_paths[self.data_pos[0]], self.font_size)
                         self.data_pos[1] = 0
         # データセットの画像の前処理
-        # imgs = imgs.reshape((imgs.shape[0], imgs.shape[1] ** 2))
-        imgs = imgs.reshape((-1, self.height, self.width, 1))
+        imgs = imgs.reshape((imgs.shape[0], imgs.shape[1] ** 2))
+        # imgs = imgs.reshape((-1, self.height, self.width, 1))
 
         return imgs, labels
 
