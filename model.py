@@ -1,60 +1,33 @@
 # define the larger model
-from keras.layers import Convolution2D, MaxPooling2D, BatchNormalization, GlobalAveragePooling2D, Dense, Dropout, \
-    Activation, Flatten
-from keras.models import Sequential
+from tensorflow.keras.layers import MaxPooling2D, Input, Dense, Dropout, GlobalAveragePooling2D, Conv2D
+from tensorflow.keras.models import Model
 
 
-def create_model():
-    model = Sequential()
-    model.add(Convolution2D(32, (3, 3), padding="same", input_shape=(28, 28, 1)))
-    model.add(Activation('relu'))
-    model.add(Convolution2D(32, (3, 3), padding="same"))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(0.5))
+def create_model(optimizer):
+    inputs = Input(shape=(28, 28, 1))
 
-    model.add(Convolution2D(64, (3, 3), padding="same"))
-    model.add(Activation('relu'))
-    model.add(Convolution2D(64, (3, 3), padding="same"))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(0.5))
+    x = Conv2D(64, (3, 3), padding="SAME", activation="relu")(inputs)
+    x = Conv2D(64, (3, 3), padding="SAME", activation="relu")(x)
+    x = Dropout(0.25)(x)
+    x = MaxPooling2D()(x)
 
-    model.add(Convolution2D(128, (3, 3), padding="same"))
-    model.add(Activation('relu'))
-    model.add(Convolution2D(128, (3, 3), padding="same"))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(0.5))
+    x = Conv2D(128, (3, 3), padding="SAME", activation="relu")(x)
+    x = Conv2D(128, (3, 3), padding="SAME", activation="relu")(x)
+    x = Dropout(0.25)(x)
+    x = MaxPooling2D()(x)
 
-    model.add(Convolution2D(256, (3, 3), padding="same"))
-    model.add(Activation('relu'))
-    model.add(Convolution2D(256, (3, 3), padding="same"))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(0.5))
+    x = Conv2D(256, (3, 3), padding="SAME", activation="relu")(x)
+    x = Conv2D(256, (3, 3), padding="SAME", activation="relu")(x)
+    x = GlobalAveragePooling2D()(x)
 
-    model.add(Convolution2D(512, (3, 3), padding="same"))
-    model.add(Activation('relu'))
-    model.add(Convolution2D(512, (3, 3), padding="same"))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(0.5))
+    x = Dense(1024, activation="relu")(x)
+    x = Dropout(0.25)(x)
+    y = Dense(62, activation="softmax")(x)
 
-    model.add(GlobalAveragePooling2D())
-    model.add(Dense(1024))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(62))
-    model.add(Activation('softmax'))
-
+    model = Model(inputs, y)
     print(model.summary())
     # Compile model
-    model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer=optimizer,
+                  metrics=['accuracy'])
 
     return model
