@@ -1,33 +1,38 @@
 # define the larger model
-from tensorflow.keras.layers import MaxPooling2D, Input, Dense, Dropout, GlobalAveragePooling2D, Conv2D
-from tensorflow.keras.models import Model
+from tensorflow.keras.layers import BatchNormalization, Dense, Dropout, MaxPool2D, Conv2D, Flatten
+from tensorflow.keras.models import Sequential
 
 
 def create_model(optimizer):
-    inputs = Input(shape=(28, 28, 1))
+    model = Sequential()
 
-    x = Conv2D(64, (3, 3), padding="SAME", activation="relu")(inputs)
-    x = Conv2D(64, (3, 3), padding="SAME", activation="relu")(x)
-    x = Dropout(0.25)(x)
-    x = MaxPooling2D()(x)
+    model.add(Conv2D(filters=64, kernel_size=(5, 5), padding='Same', activation='relu', input_shape=(28, 28, 1)))
+    model.add(BatchNormalization())
 
-    x = Conv2D(128, (3, 3), padding="SAME", activation="relu")(x)
-    x = Conv2D(128, (3, 3), padding="SAME", activation="relu")(x)
-    x = Dropout(0.25)(x)
-    x = MaxPooling2D()(x)
+    model.add(Conv2D(filters=64, kernel_size=(5, 5), padding='Same', activation='relu'))
+    model.add(BatchNormalization())
 
-    x = Conv2D(256, (3, 3), padding="SAME", activation="relu")(x)
-    x = Conv2D(256, (3, 3), padding="SAME", activation="relu")(x)
-    x = GlobalAveragePooling2D()(x)
+    model.add(MaxPool2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
 
-    x = Dense(1024, activation="relu")(x)
-    x = Dropout(0.25)(x)
-    y = Dense(62, activation="softmax")(x)
+    model.add(Conv2D(filters=64, kernel_size=(3, 3), padding='Same', activation='relu'))
+    model.add(BatchNormalization())
 
-    model = Model(inputs, y)
-    print(model.summary())
-    # Compile model
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer,
-                  metrics=['accuracy'])
+    model.add(Conv2D(filters=64, kernel_size=(3, 3), padding='Same', activation='relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPool2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
 
+    model.add(Conv2D(filters=64, kernel_size=(3, 3), padding='Same', activation='relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.25))
+
+    model.add(Flatten())
+    model.add(Dense(256, activation="relu"))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.25))
+
+    model.add(Dense(62, activation="softmax"))
+
+    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
     return model

@@ -1,5 +1,5 @@
 from tensorflow.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
-from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.optimizers import SGD
 
 from model import create_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -41,7 +41,7 @@ datagen = ImageDataGenerator(
 datagen.fit(x_train)
 
 # Create a model
-optimizer = RMSprop(lr=0.01, rho=0.9, epsilon=1e-08, decay=0.0)
+optimizer = SGD(lr=0.01)
 model = create_model(optimizer)
 
 # Train
